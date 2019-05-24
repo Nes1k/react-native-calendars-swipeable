@@ -3,6 +3,7 @@ import {
   View,
   ViewPropTypes
 } from 'react-native';
+import {PanGestureHandler, State} from 'react-native-gesture-handler';
 import PropTypes from 'prop-types';
 
 import XDate from 'xdate';
@@ -241,8 +242,87 @@ class Calendar extends Component {
     return (<View style={this.style.week} key={id}>{week}</View>);
   }
 
+  dayWH = { width: 0, height: 0 };
+  layout = { width: 0, height: 0 };
+  days = [];
+  prevDay = null;
+  lastDay = null;
+
+  calculateDayWH = () => {
+    if (!this.dayWH.height && this.days && this.days.length > 7) {
+      dayHeight = this.layout.height / (this.days.length / 7);
+      this.dayWH = { width: this.layout.width / 7, height: dayHeight };
+    }
+  }
+
+  getColumnAndRow = (x, y) => {
+    const { width, height } = this.dayWH;
+    const column = Math.ceil(x / width) - 1;
+    const row = Math.ceil(y / height) - 1;
+    return { column, row };
+  }
+
+  isInArea = (x, y) => {
+    return x > 0 && x < this.layout.width && y > 0 && y < this.layout.height;
+  }
+
+  isInReducedDayWidth = (x, column) => {
+    const { width } = this.dayWH;
+    return width * column + width * 0.1 <= x && x <= width * column + width * 0.9;
+  }
+
+  isInReducedDayHeight = (y, row) => {
+    const { height } = this.dayWH;
+    return height * row + height * 0.1 <= y && y <= height * row + height * 0.9;
+  }
+
+  isBackSwipe = (dateAsObject) => {
+    const { prevDay, props } = this;
+    return prevDay && prevDay.dateString === dateAsObject.dateString && prevDay.dateString in props.markedDates;
+  }
+
+  isLatelySelected = (dateAsObject) => {
+    const { lastDay } = this;
+    return (lastDay && (lastDay.dateString === dateAsObject.dateString));
+  }
+
+  isSameMonth = (day) => {
+    return dateutils.sameMonth(day, this.state.currentMonth);
+  }
+
+  onPanGestureEvent = ({ nativeEvent: { x, y } }) => {
+    if (this.days.length === 0 || !this.isInArea(x, y)) return null;
+
+    const { column, row } = this.getColumnAndRow(x, y);
+
+    if (this.isInReducedDayWidth(x, column) && this.isInReducedDayHeight(y, row)) {
+      const day = this.days[row * 7 + column];
+      const dateAsObject = xdateToData(day);
+      if (this.isSameMonth(day) && !this.isLatelySelected(dateAsObject)) {
+        if (this.isBackSwipe(dateAsObject)) this.pressDay(this.lastDay);
+        this.prevDay = this.lastDay;
+        this.lastDay = dateAsObject;
+        this.pressDay(dateAsObject);
+      }
+    }
+  }
+
+  onHandlerStateChange = ({ nativeEvent: { state }}) => {
+    if ([State.CANCELLED, State.END, State.FAILED].includes(state)) {
+      this.prevDay = null;
+      this.lastDay = null;
+    }
+  }
+
+  onCalendarLayout = ({nativeEvent: {layout: { width, height }}}) => {
+    this.layout = { width, height };
+    this.calculateDayWH()
+  }
+
+
   render() {
     const days = dateutils.page(this.state.currentMonth, this.props.firstDay);
+    this.days = [...days];
     const weeks = [];
     while (days.length) {
       weeks.push(this.renderWeek(days.splice(0, 7), weeks.length));
@@ -272,8 +352,18 @@ class Calendar extends Component {
           onPressArrowLeft={this.props.onPressArrowLeft}
           onPressArrowRight={this.props.onPressArrowRight}
         />
-        <View style={this.style.monthView}>{weeks}</View>
-      </View>);
+        <PanGestureHandler
+          activeOffsetX={[-10, 10]}
+          maxPointers={1}
+          onGestureEvent={this.onPanGestureEvent}
+          onHandlerStateChange={this.onHandlerStateChange}
+        >
+          <View onLayout={this.onCalendarLayout} style={this.style.monthView}>
+            {weeks}
+          </View>
+        </PanGestureHandler>
+      </View>
+    );
   }
 }
 
