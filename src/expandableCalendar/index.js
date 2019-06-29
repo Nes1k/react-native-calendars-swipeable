@@ -126,7 +126,6 @@ class ExpandableCalendar extends Component {
   }
 
   scrollPage(next) {
-    // TODO: flip on RTL?
     if (this.props.horizontal) {
       const d = parseDate(this.props.context.date);
       
@@ -134,7 +133,12 @@ class ExpandableCalendar extends Component {
         d.setDate(1);
         d.addMonths(next ? 1 : -1);
       } else {
-        const firstDayOfWeek = (next ? 7 : -7) - d.getDay() + this.props.firstDay;
+        const {firstDay} = this.props;
+        let dayOfTheWeek = d.getDay();
+        if (dayOfTheWeek < firstDay && firstDay > 0) {
+          dayOfTheWeek = 7 + dayOfTheWeek;
+        }
+        const firstDayOfWeek = (next ? 7 : -7) - dayOfTheWeek + firstDay;
         d.addDays(firstDayOfWeek);
       }
       _.invoke(this.props.context, 'setDate', this.getDateString(d), UPDATE_SOURCES.PAGE_SCROLL); 
@@ -211,13 +215,18 @@ class ExpandableCalendar extends Component {
       // disable pan detection when vertical calendar is open to allow calendar scroll
       return false;
     }
+    if (this.state.position === POSITIONS.CLOSED && gestureState.dy < 0) {
+      // disable pan detection to limit to closed height
+      return false;
+    }
     return gestureState.dy > 5 || gestureState.dy < -5;
   };
   handlePanResponderGrant = () => {
   
   };
   handlePanResponderMove = (e, gestureState) => {
-    this._wrapperStyles.style.height = this._height + gestureState.dy;
+    // limit min height to closed height
+    this._wrapperStyles.style.height = Math.max(this.closedHeight, this._height + gestureState.dy);
 
     if (!this.props.horizontal) {
       // vertical CalenderList header
@@ -231,8 +240,8 @@ class ExpandableCalendar extends Component {
 
     this.updateNativeStyles();
   };
-  handlePanResponderEnd = (e, gestureState) => {
-    this._height += gestureState.dy;
+  handlePanResponderEnd = () => {
+    this._height = this._wrapperStyles.style.height;
     this.bounceToPosition();
   };
 
@@ -373,7 +382,7 @@ class ExpandableCalendar extends Component {
         style={[this.style.header, {height: HEADER_HEIGHT, top: this.state.headerDeltaY}]}
         pointerEvents={'none'}
       >
-        <Text style={this.style.headerTitle}>{monthYear}</Text>
+        <Text allowFontScaling={false} style={this.style.headerTitle}>{monthYear}</Text>
         {this.renderWeekDaysNames()}
       </Animated.View>
     );
@@ -455,6 +464,7 @@ class ExpandableCalendar extends Component {
             onPressArrowRight={this.onPressArrowRight}
             hideExtraDays={!horizontal}
             renderArrow={this.renderArrow}
+            staticHeader
           /> 
           {horizontal && this.renderWeekCalendar()}
           {!hideKnob && this.renderKnob()}

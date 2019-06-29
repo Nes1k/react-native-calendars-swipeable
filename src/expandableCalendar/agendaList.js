@@ -1,10 +1,7 @@
 import _ from 'lodash';
 import PropTypes from 'prop-types';
 import React, {Component} from 'react';
-import {
-  SectionList,
-  Text
-} from 'react-native';
+import {SectionList, Text} from 'react-native';
 import XDate from 'xdate';
 
 import styleConstructor from './style';
@@ -29,13 +26,16 @@ class AgendaList extends Component {
 
   constructor(props) {
     super(props);
-
-    // this.state = {};
-
     this.style = styleConstructor(props.theme);
-    this._topSection = undefined;
+
+    this._topSection = _.get(props, 'sections[0].title');
     this.didScroll = false;
     this.sectionScroll = false;
+
+    this.viewabilityConfig = {
+      itemVisiblePercentThreshold: 20 // 50 means if 50% of the item is visible
+    };
+    this.list = React.createRef();
   }
 
   getSectionIndex(date) {
@@ -62,16 +62,16 @@ class AgendaList extends Component {
   }
 
   scrollToSection(sectionIndex) {
-    if (this.list && sectionIndex !== undefined) {
+    if (this.list.current && sectionIndex !== undefined) {
       this.sectionScroll = true; // to avoid setDate() in onViewableItemsChanged
       this._topSection = this.props.sections[sectionIndex].title;
 
-      this.list.scrollToLocation({
+      this.list.current.scrollToLocation({
         animated: true,
         sectionIndex: sectionIndex,
         itemIndex: 0,
         viewPosition: 0, // position at the top
-        viewOffset: commons.isAndroid ? 10 : 0
+        viewOffset: commons.isAndroid ? this.sectionHeight : 0
       });
     }
   }
@@ -88,19 +88,27 @@ class AgendaList extends Component {
     }
   }
 
-  onScroll = () => {
+  onScroll = (event) => {
     if (!this.didScroll) {
       this.didScroll = true;
     }
+    _.invoke(this.props, 'onScroll', event);
   }
 
-  onMomentumScrollEnd = () => {
+  onMomentumScrollBegin = (event) => {
+    _.invoke(this.props.context, 'setDisabled', true);
+    _.invoke(this.props, 'onMomentumScrollBegin', event);
+  }
+
+  onMomentumScrollEnd = (event) => {
     // when list momentum ends AND when scrollToSection scroll ends
     this.sectionScroll = false;
+    _.invoke(this.props.context, 'setDisabled', false);
+    _.invoke(this.props, 'onMomentumScrollEnd', event);
   }
 
-  onScrollEndDrag = () => {
-    // when list drag ends
+  onHeaderLayout = ({nativeEvent}) => {
+    this.sectionHeight = nativeEvent.layout.height;
   }
 
   renderSectionHeader = ({section: {title}}) => {
@@ -110,26 +118,26 @@ class AgendaList extends Component {
     const sectionTitle = date === today ? `${todayString.toUpperCase()}, ${date}` : date;
     
     return (
-      <Text style={[this.style.sectionText, this.props.sectionStyle]}>{sectionTitle}</Text>
+      <Text allowFontScaling={false} style={[this.style.sectionText, this.props.sectionStyle]} onLayout={this.onHeaderLayout}>{sectionTitle}</Text>
     );
   }
+
+  keyExtractor = (item, index) => String(index);
 
   render() {
     return (
       <SectionList
         {...this.props}
-        ref={r => this.list = r}
-        keyExtractor={(item, index) => String(index)}
+        ref={this.list}
+        keyExtractor={this.keyExtractor}
         showsVerticalScrollIndicator={false}
         stickySectionHeadersEnabled
         onViewableItemsChanged={this.onViewableItemsChanged}
-        viewabilityConfig={{
-          itemVisiblePercentThreshold: 20 // 50 means if 50% of the item is visible
-        }}
+        viewabilityConfig={this.viewabilityConfig}
         renderSectionHeader={this.renderSectionHeader}
         onScroll={this.onScroll}
+        onMomentumScrollBegin={this.onMomentumScrollBegin}
         onMomentumScrollEnd={this.onMomentumScrollEnd}
-        onScrollEndDrag={this.onScrollEndDrag}
         // onScrollToIndexFailed={(info) => { console.warn('onScrollToIndexFailed info: ', info); }}
         // getItemLayout={this.getItemLayout} // onViewableItemsChanged is not updated when list scrolls!!!
       />

@@ -9,36 +9,55 @@ import {
   TouchableOpacity,
   Button
 } from 'react-native';
-import XDate from 'xdate';
 import {ExpandableCalendar, AgendaList, CalendarProvider} from 'react-native-calendars';
 
 
-const START_DATE = XDate().toString('yyyy-MM-dd');
-const items = [
-  {title: START_DATE, data: [{hour: '4pm', duration: '1h', title: 'Pilates ABC'}, {hour: '5pm', duration: '1h', title: 'Vinyasa Yoga'}]},
-  {title: '2019-06-01', data: [{hour: '1pm', duration: '1h', title: 'Ashtanga Yoga'}, {hour: '2pm', duration: '1h', title: 'Deep Streches'}, {hour: '3pm', duration: '1h', title: 'Private Yoga'}]},
-  {title: '2019-06-02', data: [{hour: '12am', duration: '1h', title: 'Ashtanga Yoga'}]},
-  {title: '2019-06-03', data: [{}]},
-  {title: '2019-06-04', data: [{hour: '9pm', duration: '1h', title: 'Pilates Reformer'}, {hour: '10pm', duration: '1h', title: 'Ashtanga'}, {hour: '11pm', duration: '1h', title: 'TRX'}, {hour: '12pm', duration: '1h', title: 'Running Group'}]},
-  {title: '2019-06-05', data: [{hour: '12am', duration: '1h', title: 'Ashtanga Yoga'}]},
-  {title: '2019-06-06', data: [{}]},
-  {title: '2019-06-07', data: [{hour: '9pm', duration: '1h', title: 'Pilates Reformer'}, {hour: '10pm', duration: '1h', title: 'Ashtanga'}, {hour: '11pm', duration: '1h', title: 'TRX'}, {hour: '12pm', duration: '1h', title: 'Running Group'}]},
-  {title: '2019-06-08', data: [{hour: '1pm', duration: '1h', title: 'Ashtanga Yoga'}, {hour: '2pm', duration: '1h', title: 'Deep Streches'}, {hour: '3pm', duration: '1h', title: 'Private Yoga'}]},
-  {title: '2019-06-09', data: [{hour: '12am', duration: '1h', title: 'Ashtanga Yoga'}]},
+const today = new Date().toISOString().split('T')[0];
+const fastDate = getPastDate(3); 
+const futureDates = getFutureDates(9);
+const dates = [fastDate, today].concat(futureDates);
+
+function getFutureDates(days) {
+  const array = [];
+  for (let index = 1; index <= days; index++) {
+    const date = new Date(Date.now() + (864e5 * index)); // 864e5 == 86400000 == 24*60*60*1000
+    const dateString = date.toISOString().split('T')[0];
+    array.push(dateString);
+  }
+  return array;
+}
+
+function getPastDate(days) {
+  return new Date(Date.now() - (864e5 * days)).toISOString().split('T')[0];
+}
+
+const ITEMS = [
+  {title: dates[0], data: [{hour: '12am', duration: '1h', title: 'Ashtanga Yoga'}]},
+  {title: dates[1], data: [{hour: '4pm', duration: '1h', title: 'Pilates ABC'}, {hour: '5pm', duration: '1h', title: 'Vinyasa Yoga'}]},
+  {title: dates[2], data: [{hour: '1pm', duration: '1h', title: 'Ashtanga Yoga'}, {hour: '2pm', duration: '1h', title: 'Deep Streches'}, {hour: '3pm', duration: '1h', title: 'Private Yoga'}]},
+  {title: dates[3], data: [{hour: '12am', duration: '1h', title: 'Ashtanga Yoga'}]},
+  {title: dates[4], data: [{}]},
+  {title: dates[5], data: [{hour: '9pm', duration: '1h', title: 'Pilates Reformer'}, {hour: '10pm', duration: '1h', title: 'Ashtanga'}, {hour: '11pm', duration: '1h', title: 'TRX'}, {hour: '12pm', duration: '1h', title: 'Running Group'}]},
+  {title: dates[6], data: [{hour: '12am', duration: '1h', title: 'Ashtanga Yoga'}]},
+  {title: dates[7], data: [{}]},
+  {title: dates[8], data: [{hour: '9pm', duration: '1h', title: 'Pilates Reformer'}, {hour: '10pm', duration: '1h', title: 'Ashtanga'}, {hour: '11pm', duration: '1h', title: 'TRX'}, {hour: '12pm', duration: '1h', title: 'Running Group'}]},
+  {title: dates[9], data: [{hour: '1pm', duration: '1h', title: 'Ashtanga Yoga'}, {hour: '2pm', duration: '1h', title: 'Deep Streches'}, {hour: '3pm', duration: '1h', title: 'Private Yoga'}]},
+  {title: dates[10], data: [{hour: '12am', duration: '1h', title: 'Ashtanga Yoga'}]}
 ];
 
 export default class ExpandableCalendarScreen extends Component {
-  
+
   onDateChanged = (/**date, updateSource*/) => {
     // console.warn('ExpandableCalendarScreen onDateChanged: ', date, updateSource);
     // fetch and set data for date + week ahead
   }
+  
+  buttonPressed() {
+    Alert.alert('show more');
+  }
 
-  getSections() {
-    const sections = _.compact(_.map(items, (item) => {
-      return {title: item.title, data: item.data};
-    }));
-    return sections;
+  itemPressed(id) {
+    Alert.alert(id);
   }
 
   renderEmptyItem() {
@@ -53,28 +72,19 @@ export default class ExpandableCalendarScreen extends Component {
     if (_.isEmpty(item)) {
       return this.renderEmptyItem();
     }
-
-    const id = item.title;
-    const props = {
-      hour: item.hour,
-      duration: item.duration,
-      title: item.title,
-      button: {label: 'info', onPress: () => Alert.alert('show more')},
-      onPress: () => Alert.alert(id)
-    };
-
+    
     return (
       <TouchableOpacity 
-        onPress={props.onPress} 
+        onPress={() => this.itemPressed(item.title)} 
         style={styles.item}
       >
         <View>
-          <Text style={styles.itemHourText}>{props.hour}</Text>
-          <Text style={styles.itemDurationText}>{props.duration}</Text>
+          <Text style={styles.itemHourText}>{item.hour}</Text>
+          <Text style={styles.itemDurationText}>{item.duration}</Text>
         </View>
-        <Text style={styles.itemTitleText}>{props.title}</Text>
+        <Text style={styles.itemTitleText}>{item.title}</Text>
         <View style={styles.itemButtonContainer}>
-          <Button title={props.button.label} onPress={props.button.onPress}/>
+          <Button title={'Info'} onPress={this.buttonPressed}/>
         </View>
       </TouchableOpacity>
     );
@@ -82,8 +92,11 @@ export default class ExpandableCalendarScreen extends Component {
 
   getMarkedDates = () => {
     const marked = {};
-    items.forEach(item => {
-      marked[item.title] = {marked: true};
+    ITEMS.forEach(item => {
+      // only mark dates with data
+      if (item.data && item.data.length > 0 && !_.isEmpty(item.data[0])) {
+        marked[item.title] = {marked: true};
+      }
     });
     return marked;
   }
@@ -127,13 +140,19 @@ export default class ExpandableCalendarScreen extends Component {
       dotColor: themeColor,
       selectedDotColor: white,
       disabledDotColor: disabledColor,
-      dotStyle: {marginTop: -2},
+      dotStyle: {marginTop: -2}
     };
   }
 
   render() {    
     return (
-      <CalendarProvider date={START_DATE} onDateChanged={this.onDateChanged}>
+      <CalendarProvider 
+        date={ITEMS[0].title} 
+        onDateChanged={this.onDateChanged} 
+        theme={{todayButtonTextColor: '#0059ff'}} 
+        showTodayButton 
+        disabledOpacity={0.6}
+      >
         <ExpandableCalendar 
           // horizontal={false}
           // hideArrows
@@ -142,16 +161,17 @@ export default class ExpandableCalendarScreen extends Component {
           // initialPosition={'open'} // ExpandableCalendar.positions.OPEN - can't find static positions
           firstDay={1}
           markedDates={this.getMarkedDates()} // {'2019-06-01': {marked: true}, '2019-06-02': {marked: true}, '2019-06-03': {marked: true}};
-          calendarStyle={{paddingLeft: 20, paddingRight: 20}}
+          calendarStyle={styles.calendar}
           theme={this.getTheme()}
           leftArrowImageSource={require('../img/previous.png')}
           rightArrowImageSource={require('../img/next.png')}
+          headerStyle={styles.calendar}
         />
         <AgendaList
-          data={items}
+          sections={ITEMS}
+          extraData={this.state}
           renderItem={this.renderItem}
-          sections={this.getSections()}
-          // sectionStyle={{backgroundColor: '#f0f4f7', color: '#79838a'}}
+          // sectionStyle={styles.section}
         />
       </CalendarProvider>
     );
@@ -159,6 +179,14 @@ export default class ExpandableCalendarScreen extends Component {
 }
 
 const styles = StyleSheet.create({
+  calendar: {
+    paddingLeft: 20, 
+    paddingRight: 20
+  },
+  section: {
+    backgroundColor: '#f0f4f7', 
+    color: '#79838a'
+  },
   item: {
     padding: 20, 
     backgroundColor: 'white', 
