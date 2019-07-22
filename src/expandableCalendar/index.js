@@ -1,5 +1,4 @@
 import _ from 'lodash';
-import PropTypes from 'prop-types';
 import React, {Component} from 'react';
 import {
   PanResponder,
@@ -8,7 +7,9 @@ import {
   Text,
   Image
 } from 'react-native';
+import PropTypes from 'prop-types';
 import XDate from 'xdate';
+import {CALENDAR_KNOB} from '../testIDs';
 
 import dateutils from '../dateutils';
 import {parseDate} from '../interface';
@@ -28,23 +29,32 @@ const SPEED = 20;
 const BOUNCINESS = 6;
 const CLOSED_HEIGHT = 120; // header + 1 week
 const WEEK_HEIGHT = 46;
-const KNOB_CONTAINER_HEIGHT = 24;
+const KNOB_CONTAINER_HEIGHT = 20;
 const HEADER_HEIGHT = 68;
+const DAY_NAMES_PADDING = 24;
 
+/**
+ * @description: Expandable calendar component
+ * @extends: CalendarList
+ * @extendslink: docs/CalendarList
+ * @example: https://github.com/wix/react-native-calendars/blob/master/example/src/screens/expandableCalendar.js
+ */
 class ExpandableCalendar extends Component {
+  static displayName = 'ExpandableCalendar';
+
   static propTypes = {
     ...CalendarList.propTypes,
-    // the initial position of the calendar ('open' or 'closed')
+    /** the initial position of the calendar ('open' or 'closed') */
     initialPosition: PropTypes.oneOf(_.values(POSITIONS)),
-    // an option to disable the pan gesture and disable the opening and closing of the calendar
+    /** an option to disable the pan gesture and disable the opening and closing of the calendar */
     disablePan: PropTypes.bool,
-    // whether to hide the knob 
+    /** whether to hide the knob  */
     hideKnob: PropTypes.bool,
-    // source for the left arrow image
+    /** source for the left arrow image */
     leftArrowImageSource: PropTypes.oneOfType([PropTypes.object, PropTypes.number, PropTypes.func]),
-    // source for the right arrow image
+    /** source for the right arrow image */
     rightArrowImageSource: PropTypes.oneOfType([PropTypes.object, PropTypes.number, PropTypes.func]),
-    // whether to have shadow/elevation for the calendar
+    /** whether to have shadow/elevation for the calendar */
     allowShadow: PropTypes.bool
   }
 
@@ -76,6 +86,16 @@ class ExpandableCalendar extends Component {
     this.calendar = undefined;
     this.visibleMonth = this.getMonth(this.props.context.date);
     this.initialDate = props.context.date; // should be set only once!!!
+    this.headerStyleOverride = {
+      'stylesheet.calendar.header': {
+        week: {
+          marginTop: 7,
+          marginBottom: -4, // reduce space between dayNames and first line of dates
+          flexDirection: 'row',
+          justifyContent: 'space-around'
+        }
+      }
+    };
 
     this.state = {
       deltaY: new Animated.Value(startHeight),
@@ -151,7 +171,6 @@ class ExpandableCalendar extends Component {
   }
 
   getDateString(date) {
-    // TODO: check other date formats, currently supports 'yyyy-MM-dd' format
     return date.toString('yyyy-MM-dd');
   }
 
@@ -347,7 +366,7 @@ class ExpandableCalendar extends Component {
   onLayout = ({nativeEvent}) => {
     const x = nativeEvent.layout.x;
     if (!this.props.horizontal) {
-      this.openHeight = commons.screenHeight - x - (commons.screenHeight * 0.2); // TODO: change to commons.screenHeight ?
+      this.openHeight = commons.screenHeight - x - (commons.screenHeight * 0.1);
     }
   }
 
@@ -361,8 +380,8 @@ class ExpandableCalendar extends Component {
         style={[
           this.style.weekDayNames, 
           {
-            paddingLeft: (this.props.calendarStyle.paddingLeft || 18) + 6, 
-            paddingRight: (this.props.calendarStyle.paddingRight || 18) + 6
+            paddingLeft: _.get(this.props, 'calendarStyle.paddingLeft') + 6 || DAY_NAMES_PADDING, 
+            paddingRight: _.get(this.props, 'calendarStyle.paddingRight') + 6 || DAY_NAMES_PADDING
           }
         ]}
       >
@@ -398,7 +417,7 @@ class ExpandableCalendar extends Component {
           position: 'absolute', 
           left: 0, 
           right: 0, 
-          top: HEADER_HEIGHT + (commons.isAndroid ? 12 : 8), // align row on top of calendar's first row
+          top: HEADER_HEIGHT + (commons.isAndroid ? 8 : 4), // align row on top of calendar's first row
           opacity: position === POSITIONS.OPEN ? 0 : 1
         }}
         pointerEvents={position === POSITIONS.CLOSED ? 'auto' : 'none'}
@@ -418,7 +437,7 @@ class ExpandableCalendar extends Component {
     // TODO: turn to TouchableOpacity with onPress that closes it
     return (
       <View style={this.style.knobContainer} pointerEvents={'none'}>
-        <View style={this.style.knob}/>
+        <View style={this.style.knob} testID={CALENDAR_KNOB}/>
       </View>
     );
   }
@@ -437,9 +456,10 @@ class ExpandableCalendar extends Component {
   }
 
   render() {
-    const {style, hideKnob, horizontal, allowShadow} = this.props;
+    const {style, hideKnob, horizontal, allowShadow, theme} = this.props;
     const {deltaY, position} = this.state;
     const isOpen = position === POSITIONS.OPEN;
+    const themeObject = Object.assign(this.headerStyleOverride, theme);
 
     return (
       <View style={[allowShadow && this.style.containerShadow, style]}>
@@ -452,6 +472,7 @@ class ExpandableCalendar extends Component {
           <CalendarList
             testID="calendar"
             {...this.props}
+            theme={themeObject}
             ref={r => this.calendar = r}
             current={this.initialDate}
             onDayPress={this.onDayPress}

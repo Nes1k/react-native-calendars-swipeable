@@ -26,3 +26,36 @@
 ### Fix
 - CalendarProvider - Fix for warning on Image 'source' type.
 - ExpandableCalendar - Fix shadow/elevation style.
+
+## [1.193.0] - 2019-06-26
+### Bug Fix
+- ExpandableCalendar - fix for week paddings. Changing knob container height and weekDays style.
+- CalendarList/item - limit headerStyle to horizontal only.
+
+## [1.194.0] - 2019-06-30
+### Added
+- CalendarProvider - 'onMonthChange' event returning date object and updateSource.
+
+## [1.195.0] - 2019-07-04
+### Change
+- Components' props comment format.
+
+## [1.196.0] - 2019-07-04
+### Added
+- CalendarList - passing 'testID' to static CalendarHeader.
+
+## [1.197.0] - 2019-07-14
+### Added
+- asCalendarConsumer - hoist non-react statics.
+
+## [1.198.0] - 2019-07-14
+### Fix
+- ExpandableCalendar - fix example screen.
+
+## [1.199.0] - 2019-07-18
+### Changed
+- CalendarHeader - editing 'testID' for static CalendarHeader.
+
+## [1.200.0] - 2019-07-18
+### Added
+- Calendar knob - added testID
