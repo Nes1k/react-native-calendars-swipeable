@@ -97,8 +97,51 @@ class Calendar extends Component {
     this.shouldComponentUpdate = shouldComponentUpdate;
   }
 
+  proxiedMarkedDates = new Proxy(this.props.markedDates, {
+    get: function(target, name) {
+      return name in target ? target[name] : undefined
+    }
+  })
+
+
   componentWillReceiveProps(nextProps) {
-    const current= parseDate(nextProps.current);
+    this.proxiedMarkedDates = new Proxy(nextProps.markedDates, {
+      get: function(target, name) {
+        if (nextProps.markingType === 'range' && Object.keys(target).length === 2) {
+          const [startDay, endDay] = Object.keys(target)
+            .map(v => v.replace(/-/g, ''))
+            .map((v) => parseInt(v, 10))
+            .sort()
+
+          const value = parseInt(name.replace(/-/g, ''), 10)
+
+          if (startDay <  value && value < endDay) {
+            return {
+              ...Object.values(target)[0],
+              startingDay: false,
+              endingDay: false
+            }
+          }
+          if (startDay === value)
+            return {
+              ...Object.values(target)[0],
+              startingDay: true,
+              endingDay: false
+            }
+
+          if (endDay === value)
+            return {
+              ...Object.values(target)[0],
+              startingDay: false,
+              endingDay: true
+            }
+        }
+
+        return name in target ? target[name] : undefined
+      }
+    })
+
+    const current = parseDate(nextProps.current)
     if (current && current.toString('yyyy MM') !== this.state.currentMonth.toString('yyyy MM')) {
       this.setState({
         currentMonth: current.clone()
@@ -198,6 +241,7 @@ class Calendar extends Component {
 
     switch (this.props.markingType) {
     case 'period':
+    case 'range':
       return UnitDay;
     case 'multi-dot':
       return MultiDotDay;
@@ -210,17 +254,17 @@ class Calendar extends Component {
     }
   }
 
-  getDateMarking(day) {
-    if (!this.props.markedDates) {
-      return false;
-    }
+  get markedDates() {
+    return this.proxiedMarkedDates
+  }
 
-    const dates = this.props.markedDates[day.toString('yyyy-MM-dd')] || EmptyArray;
-    if (dates.length || dates) {
-      return dates;
-    } else {
-      return false;
-    }
+  getDateMarking(day) {
+    if (!this.markedDates) return false;
+
+    const dates = this.markedDates[day.toString('yyyy-MM-dd')] || EmptyArray
+    if (dates.length || Object(dates) === dates) {
+      return dates
+    } else return false
   }
 
   renderWeekNumber (weekNumber) {
@@ -276,7 +320,7 @@ class Calendar extends Component {
 
   isBackSwipe = (dateAsObject) => {
     const { prevDay, props } = this;
-    return prevDay && prevDay.dateString === dateAsObject.dateString && prevDay.dateString in props.markedDates;
+    return prevDay && prevDay.dateString === dateAsObject.dateString && prevDay.dateString in this.markedDates;
   }
 
   isLatelySelected = (dateAsObject) => {
@@ -325,17 +369,15 @@ class Calendar extends Component {
     while (days.length) {
       weeks.push(this.renderWeek(days.splice(0, 7), weeks.length));
     }
-    
     let indicator;
     const current = parseDate(this.props.current);
     if (current) {
       const lastMonthOfDay = current.clone().addMonths(1, true).setDate(1).addDays(-1).toString('yyyy-MM-dd');
       if (this.props.displayLoadingIndicator &&
-          !(this.props.markedDates && this.props.markedDates[lastMonthOfDay])) {
+          !(this.markedDates && this.markedDates[lastMonthOfDay])) {
         indicator = true;
       }
     }
-
     return (
       <View style={[this.style.container, this.props.style]}>
         <CalendarHeader
@@ -354,6 +396,7 @@ class Calendar extends Component {
           onPressArrowRight={this.props.onPressArrowRight}
         />
         <PanGestureHandler
+          enabled={this.props.markingType !== 'range'}
           activeOffsetX={[-10, 10]}
           maxPointers={1}
           onGestureEvent={this.onPanGestureEvent}
