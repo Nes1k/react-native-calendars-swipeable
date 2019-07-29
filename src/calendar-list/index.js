@@ -64,9 +64,10 @@ class CalendarList extends Component {
 
   constructor(props) {
     super(props);
-    
+
     this.style = styleConstructor(props.theme);
-    
+    this.scrollTimeout = undefined;
+
     this.viewabilityConfig = {
       itemVisiblePercentThreshold: 20
     };
@@ -192,8 +193,12 @@ class CalendarList extends Component {
       }
     }
     
+
     if (this.props.onVisibleMonthsChange) {
-      this.props.onVisibleMonthsChange(visibleMonths);
+      clearTimeout(this.scrollTimeout);
+      this.scrollTimeout = setTimeout(() => {
+        this.props.onVisibleMonthsChange(visibleMonths);
+      }, 200);
     }
 
     this.setState({
@@ -247,7 +252,10 @@ class CalendarList extends Component {
           this.props.onMonthChange(xdateToData(currMont));
         }
         if (this.props.onVisibleMonthsChange) {
-          this.props.onVisibleMonthsChange([xdateToData(currMont)]);
+          clearTimeout(this.scrollTimeout);
+          this.scrollTimeout = setTimeout(() => {
+            this.props.onVisibleMonthsChange(visibleMonths);
+          }, 200);
         }
       }
     });
